@@ -1,3 +1,19 @@
 node_modules/
 dist/
 *.log
+
+# Terraform state, local plans, and account configuration
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+infra/bootstrap/backend.tf
+__pycache__/

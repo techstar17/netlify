@@ -1,0 +1,63 @@
+name: Quality and security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Dependency vulnerability gate
+        run: npm audit --audit-level=high
+      - run: npm run test:release
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Test the actual production build
+        run: npm test
+      - name: Retain failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-failure-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: '1.12.2'
+      - run: terraform fmt -check -recursive infra
+      - run: terraform -chdir=infra/bootstrap init -backend=false -lockfile=readonly -input=false
+      - run: terraform -chdir=infra/bootstrap validate
+      - run: terraform -chdir=infra/terraform init -backend=false -lockfile=readonly -input=false
+      - run: terraform -chdir=infra/terraform validate
+      - name: Mock-provider security and configuration regression tests (no AWS resources)
+        run: terraform -chdir=infra/terraform test
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

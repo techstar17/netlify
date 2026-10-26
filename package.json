@@ -1,1 +1,21 @@
-{"name":"frame-streaming","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0"},"dependencies":{"react":"19.3.1","react-dom":"19.3.1"},"devDependencies":{"vite":"8.3.5"}}
+{
+  "name": "frame-streaming",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "playwright test",
+    "test:release": "python3 -m unittest discover -s tests/unit -v"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "vite": "8.3.5"
+  }
+}

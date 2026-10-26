@@ -1,0 +1,97 @@
+name: AWS production release
+run-name: AWS ${{ inputs.operation || 'deploy' }} by @${{ github.actor }}
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy this commit or restore a previously completed release
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      release_id:
+        description: Full 40-character commit SHA of the stored release (rollback only)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Serialize deployments and rollbacks; never interrupt an entry-point switch.
+concurrency:
+  group: frame-production
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+  release:
+    needs: checks
+    if: github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      SITE_BUCKET: ${{ vars.SITE_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      OPERATION: ${{ inputs.operation || 'deploy' }}
+      REQUESTED_RELEASE: ${{ inputs.release_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Validate configuration and release input
+        run: |
+          python3 - <<'PY'
+          import os, re
+          for name in ['SITE_BUCKET', 'CLOUDFRONT_DISTRIBUTION_ID', 'SITE_URL']:
+              if not os.environ.get(name):
+                  raise SystemExit(f'Missing GitHub repository variable: {name}')
+          if os.environ['OPERATION'] == 'rollback' and not re.fullmatch('[0-9a-f]{40}', os.environ['REQUESTED_RELEASE']):
+              raise SystemExit('Rollback requires a full lowercase commit SHA')
+          PY
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build immutable release
+        if: env.OPERATION == 'deploy'
+        env:
+          RELEASE_ID: ${{ github.sha }}
+          ASSET_BASE: /releases/${{ github.sha }}/
+        run: npm run build
+      - name: Obtain short-lived AWS credentials using GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: frame-${{ github.run_id }}
+          role-duration-seconds: 3600
+          mask-aws-account-id: true
+      - name: Publish, check live behavior, and restore prior HTML on failure
+        run: |
+          target="$GITHUB_SHA"
+          if [ "$OPERATION" = rollback ]; then target="$REQUESTED_RELEASE"; fi
+          python3 scripts/release.py "$OPERATION" "$target" --browser-check
+          {
+            echo "### Verified AWS release"
+            echo "Operation: $OPERATION"
+            echo "Commit: $target"
+            echo "Site: $SITE_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: aws-browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
