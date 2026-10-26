@@ -26,3 +26,7 @@ Photography is sourced from Start Bootstrap's Clean Blog, Grayscale, and Landing
 DM Sans and Barlow Condensed are from Google Fonts and distributed under the SIL Open Font License (included in `public/fonts`).
 
 Sample video: Big Buck Bunny by the Blender Foundation, licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), sourced from https://github.com/mediaelement/mediaelement-files. Original film: https://peach.blender.org/ . This bundled clip is the upstream one-minute sample, unmodified.
+
+## Publish on GitHub Pages
+
+A deployment workflow runs on pushes to `main` and can be run manually under Actions. In the repository's Settings → Pages, select **GitHub Actions** as the source once. The workflow deploys the production bundle to GitHub Pages. The relative Vite base supports both GitHub Pages subpaths and Netlify.
