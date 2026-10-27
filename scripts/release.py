@@ -8,6 +8,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -110,7 +111,8 @@ def main():
         check_site(site_url, release)
         if args.browser_check:
             env = {**os.environ, "PLAYWRIGHT_BASE_URL": site_url, "EXPECTED_RELEASE": release}
-            subprocess.run(["npm", "test"], check=True, env=env)
+            command = ["cmd.exe", "/d", "/c", "npm test"] if sys.platform == "win32" else ["npm", "test"]
+            subprocess.run(command, check=True, env=env)
 
     publish(AwsCli(bucket, distribution), args.operation, args.release, args.dist, health)
 

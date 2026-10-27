@@ -1,0 +1,8 @@
+# New AWS experience, active Free plan, selected Region us-east-2.
+# This is a separate operator deployment path; don't apply advanced defaults.
+aws_region                      = "us-east-2"
+enable_github_oidc               = false
+create_github_oidc_provider      = false
+enable_global_cloudfront_alarms  = false
+monthly_budget_usd              = 10
+# alert_email = "your-address@example.com" # Budget email only in project mode.

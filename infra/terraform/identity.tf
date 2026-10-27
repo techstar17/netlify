@@ -1,12 +1,13 @@
 resource "aws_iam_openid_connect_provider" "github" {
-  count          = var.create_github_oidc_provider ? 1 : 0
+  count          = var.enable_github_oidc && var.create_github_oidc_provider ? 1 : 0
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
 }
 locals {
-  github_oidc_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+  github_oidc_arn = !var.enable_github_oidc ? null : var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 resource "aws_iam_role" "deploy" {
+  count                = var.enable_github_oidc ? 1 : 0
   name                 = "frame-production-deploy"
   max_session_duration = 3600
   assume_role_policy = jsonencode({
@@ -21,8 +22,9 @@ resource "aws_iam_role" "deploy" {
   })
 }
 resource "aws_iam_role_policy" "deploy" {
-  name = "release-publishing"
-  role = aws_iam_role.deploy.id
+  count = var.enable_github_oidc ? 1 : 0
+  name  = "release-publishing"
+  role  = aws_iam_role.deploy[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

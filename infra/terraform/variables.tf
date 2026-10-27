@@ -66,3 +66,13 @@ variable "acm_certificate_arn" {
     error_message = "CloudFront requires an ACM certificate ARN from us-east-1."
   }
 }
+variable "enable_github_oidc" {
+  description = "Advanced AWS mode only. New-experience projects block IAM identity-provider creation; use false and deploy from an authenticated operator session."
+  type        = bool
+  default     = true
+}
+variable "enable_global_cloudfront_alarms" {
+  description = "Create CloudWatch alarms/SNS in us-east-1. Disable for a new-experience project assigned to another Region. Dashboard metric reads remain available."
+  type        = bool
+  default     = true
+}

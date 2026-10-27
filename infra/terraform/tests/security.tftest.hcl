@@ -71,11 +71,11 @@ run "private_origin_and_restricted_identity" {
     error_message = "A minimum TTL above zero breaks atomic entry-point switching."
   }
   assert {
-    condition     = jsondecode(aws_iam_role.deploy.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:techstar17/netlify:environment:production"
+    condition     = jsondecode(aws_iam_role.deploy[0].assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:techstar17/netlify:environment:production"
     error_message = "OIDC trust must be restricted to this repository's production environment."
   }
   assert {
-    condition     = jsondecode(aws_iam_role.deploy.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:aud"] == "sts.amazonaws.com"
+    condition     = jsondecode(aws_iam_role.deploy[0].assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:aud"] == "sts.amazonaws.com"
     error_message = "OIDC audience must be AWS STS."
   }
   assert {
@@ -83,11 +83,11 @@ run "private_origin_and_restricted_identity" {
     error_message = "Origin reads must be restricted to this CloudFront distribution."
   }
   assert {
-    condition     = alltrue([for action in flatten([for statement in jsondecode(aws_iam_role_policy.deploy.policy).Statement : statement.Action]) : contains(["s3:ListBucket", "s3:GetObject", "s3:PutObject", "cloudfront:CreateInvalidation", "cloudfront:GetInvalidation", "cloudfront:GetDistribution"], action)])
+    condition     = alltrue([for action in flatten([for statement in jsondecode(aws_iam_role_policy.deploy[0].policy).Statement : statement.Action]) : contains(["s3:ListBucket", "s3:GetObject", "s3:PutObject", "cloudfront:CreateInvalidation", "cloudfront:GetInvalidation", "cloudfront:GetDistribution"], action)])
     error_message = "The deploy role must not gain deletion or infrastructure administration permissions."
   }
   assert {
-    condition     = aws_cloudwatch_metric_alarm.server_errors.alarm_actions == toset([aws_sns_topic.alerts.arn])
+    condition     = aws_cloudwatch_metric_alarm.server_errors[0].alarm_actions == toset([aws_sns_topic.alerts[0].arn])
     error_message = "Server-error alarm must publish notifications."
   }
   assert {
@@ -138,7 +138,29 @@ run "regional_origin_with_global_monitoring" {
   command = plan
   variables { aws_region = "us-east-2" }
   assert {
-    condition     = aws_cloudwatch_dashboard.site.dashboard_name == "FRAME-production" && jsondecode(aws_sns_topic_policy.alerts.policy).Statement[0].Condition.ArnLike["aws:SourceArn"] == "arn:aws:cloudwatch:us-east-1:123456789012:alarm:frame-*"
+    condition     = aws_cloudwatch_dashboard.site.dashboard_name == "FRAME-production" && jsondecode(aws_sns_topic_policy.alerts[0].policy).Statement[0].Condition.ArnLike["aws:SourceArn"] == "arn:aws:cloudwatch:us-east-1:123456789012:alarm:frame-*"
     error_message = "CloudFront monitoring must remain global when the S3 region changes."
+  }
+}
+
+run "new_experience_project_without_prohibited_resources" {
+  command = plan
+  variables {
+    aws_region                      = "us-east-2"
+    enable_github_oidc              = false
+    create_github_oidc_provider     = false
+    enable_global_cloudfront_alarms = false
+  }
+  assert {
+    condition     = length(aws_iam_openid_connect_provider.github) == 0 && length(aws_iam_role.deploy) == 0 && length(aws_iam_role_policy.deploy) == 0
+    error_message = "Project mode must not create OIDC providers or a GitHub deployment role."
+  }
+  assert {
+    condition     = length(aws_sns_topic.alerts) == 0 && length(aws_cloudwatch_metric_alarm.server_errors) == 0 && length(aws_cloudwatch_metric_alarm.client_errors) == 0
+    error_message = "Project mode must not create out-of-region SNS or CloudWatch alarms."
+  }
+  assert {
+    condition     = aws_s3_bucket_public_access_block.site.block_public_policy && aws_cloudwatch_dashboard.site.dashboard_name == "FRAME-production"
+    error_message = "Project mode must retain the private origin and monitoring dashboard."
   }
 }

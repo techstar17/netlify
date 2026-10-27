@@ -40,7 +40,7 @@ The repository now includes an AWS delivery platform in code:
 - Serialized AWS deployments with immutable release prefixes, checksummed stored artifacts, live HTTP/browser checks, and automatic restoration of prior HTML on post-switch failure.
 - Manual rollback to a completed Git SHA without rebuilding.
 
-Start with **[Connect GitHub to AWS](docs/aws-setup.md)**. It uses AWS CloudShell and OIDC; no AWS keys are pasted into chat or GitHub. Provisioning creates billable resources. AWS deployment stays skipped until repository variables are supplied. This repository's configuration is not evidence of a running AWS site.
+For the current Free-plan **new AWS experience** in us-east-2, start with **[Windows project deployment](docs/windows-project.md)**; this mode avoids prohibited identity-provider and cross-Region alarm creation. The reference OIDC pipeline applies to a compatible advanced AWS experience. For that path, start with **[Connect GitHub to AWS](docs/aws-setup.md)**. It uses AWS CloudShell and OIDC; no AWS keys are pasted into chat or GitHub. Provisioning creates billable resources. AWS deployment stays skipped until repository variables are supplied. This repository's configuration is not evidence of a running AWS site.
 
 - [Training sandbox requirements](docs/sandbox.md)
 - [Architecture and tradeoffs](docs/architecture.md)

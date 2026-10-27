@@ -11,7 +11,7 @@
 
 ## Validation record
 
-Local validation passed: four Playwright browser scenarios on both the normal production build and a simulated versioned-release host; fifteen release/health-check unit tests; six Terraform mock-provider runs; validation of both Terraform stacks; actionlint workflow validation; npm audit with zero reported vulnerabilities; and Gitleaks scanning of history/new changes. Terraform's mock-provider tests exercise configuration without creating AWS resources; deployment unit tests simulate S3/CloudFront and failure handling. They do not prove real AWS permission, OIDC, logging, or notification delivery. CI workflows are defined, but a workflow file is not proof of a successful hosted run.
+Local validation passed: four Playwright browser scenarios on both the normal production build and a simulated versioned-release host; fifteen release/health-check unit tests; seven Terraform mock-provider runs; validation of both Terraform stacks; actionlint workflow validation; npm audit with zero reported vulnerabilities; and Gitleaks scanning of history/new changes. Terraform's mock-provider tests exercise configuration without creating AWS resources; deployment unit tests simulate S3/CloudFront and failure handling. They do not prove real AWS permission, OIDC, logging, or notification delivery. CI workflows are defined, but a workflow file is not proof of a successful hosted run.
 
 ## Evidence to capture after provisioning
 
@@ -32,3 +32,7 @@ Local validation passed: four Playwright browser scenarios on both the normal pr
 Before live deployment: **“Built a React workload and an AWS delivery platform in code: Terraform, private S3/CloudFront, GitHub OIDC, automated quality gates, versioned releases, rollback, and monitoring configuration. Validated infrastructure with mock-provider tests and exercised release failure paths locally.”**
 
 After the table is backed by actual evidence, update the description with the public URL, run links, observed recovery time, and costs. Do not claim production uptime, alert delivery, zero downtime, completed cloud deployment, or a recovery SLO based only on configuration files.
+
+## New-experience project limitation
+
+AWS reports an active Free-plan project in us-east-2, with successful operator login on Windows. Managed policies block OIDC identity-provider creation and out-of-region alarm writes. The tested project variant disables those resources and uses operator deployment; automated AWS OIDC delivery and AWS alarm emails must not be claimed for this mode. GitHub CI, private hosting, logs, dashboard and budget configuration remain. Windows Terraform 1.15.4 satisfies the version requirement, but a real AWS plan/apply and public verification are still outstanding.

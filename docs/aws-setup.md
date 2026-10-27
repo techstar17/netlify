@@ -4,6 +4,8 @@
 
 **Using a training sandbox?** Read [sandbox constraints](sandbox.md) first. Confirm the provider, permitted region/services, and IAM permissions before applying this full account-level stack.
 
+**Current s3 project:** AWS has confirmed an active Free plan in the new experience. Use the [Windows project guide](windows-project.md), not this advanced OIDC walkthrough: managed project policies block creating identity providers.
+
 ## 1. Open an authenticated terminal
 
 Sign in to the [AWS Console](https://console.aws.amazon.com/) using an IAM user or an IAM Identity Center role with permission to create S3, CloudFront, IAM OIDC/roles/policies, CloudWatch, SNS, and Budgets resources. Open **CloudShell** (terminal icon). Choose a permitted region for the S3 origin (default **us-east-1**; **us-east-2** is also supported). CloudFront monitoring additionally requires permission for CloudWatch/SNS in us-east-1, regardless of the origin region.

@@ -1,21 +1,23 @@
 resource "aws_sns_topic" "alerts" {
+  count    = var.enable_global_cloudfront_alarms ? 1 : 0
   provider = aws.global
   name     = "frame-production-alerts"
 }
 resource "aws_sns_topic_subscription" "email" {
   provider  = aws.global
-  count     = var.alert_email == null ? 0 : 1
-  topic_arn = aws_sns_topic.alerts.arn
+  count     = var.enable_global_cloudfront_alarms && var.alert_email != null ? 1 : 0
+  topic_arn = aws_sns_topic.alerts[0].arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
 resource "aws_sns_topic_policy" "alerts" {
+  count    = var.enable_global_cloudfront_alarms ? 1 : 0
   provider = aws.global
-  arn      = aws_sns_topic.alerts.arn
+  arn      = aws_sns_topic.alerts[0].arn
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow", Principal = { Service = "cloudwatch.amazonaws.com" }, Action = "SNS:Publish", Resource = aws_sns_topic.alerts.arn
+      Effect = "Allow", Principal = { Service = "cloudwatch.amazonaws.com" }, Action = "SNS:Publish", Resource = aws_sns_topic.alerts[0].arn
       Condition = {
         StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
         ArnLike      = { "aws:SourceArn" = "arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarm:frame-*" }
@@ -24,6 +26,7 @@ resource "aws_sns_topic_policy" "alerts" {
   })
 }
 resource "aws_cloudwatch_metric_alarm" "server_errors" {
+  count               = var.enable_global_cloudfront_alarms ? 1 : 0
   provider            = aws.global
   alarm_name          = "frame-cloudfront-server-errors"
   alarm_description   = "5xx rate above 1% for two five-minute periods. Inspect CloudFront access logs and roll back a bad release."
@@ -37,10 +40,11 @@ resource "aws_cloudwatch_metric_alarm" "server_errors" {
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
   dimensions          = { DistributionId = aws_cloudfront_distribution.site.id, Region = "Global" }
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-  ok_actions          = [aws_sns_topic.alerts.arn]
+  alarm_actions       = [aws_sns_topic.alerts[0].arn]
+  ok_actions          = [aws_sns_topic.alerts[0].arn]
 }
 resource "aws_cloudwatch_metric_alarm" "client_errors" {
+  count               = var.enable_global_cloudfront_alarms ? 1 : 0
   provider            = aws.global
   alarm_name          = "frame-cloudfront-client-errors"
   alarm_description   = "4xx rate above 5% for two five-minute periods; investigate missing release assets and S3 permissions."
@@ -54,11 +58,11 @@ resource "aws_cloudwatch_metric_alarm" "client_errors" {
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
   dimensions          = { DistributionId = aws_cloudfront_distribution.site.id, Region = "Global" }
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-  ok_actions          = [aws_sns_topic.alerts.arn]
+  alarm_actions       = [aws_sns_topic.alerts[0].arn]
+  ok_actions          = [aws_sns_topic.alerts[0].arn]
 }
 resource "aws_cloudwatch_dashboard" "site" {
-  provider       = aws.global
+  provider       = aws
   dashboard_name = "FRAME-production"
   dashboard_body = jsonencode({ widgets = [
     for index, metric in ["Requests", "4xxErrorRate", "5xxErrorRate", "BytesDownloaded"] : {
